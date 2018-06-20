@@ -25,5 +25,5 @@ download_video --help
     ![Alt text](images/2.png?raw=true "Title")
 3. Copy url
     ![Alt text](images/3.png?raw=true "Title")
-4. Run `download_video --url http://...`
+4. Run with url from 3. `download_video --url http://...`
     
