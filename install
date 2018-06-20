@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+use Term::ANSIColor;
+
+system("perl Makefile.PL");
+
+system("make");
+system("sudo make install");
+
+print color("bold red");
+print "Add installing path to your .bashrc/.bash_profile\n";
+print color("bold green");
+print "Hint:";
+print color("reset");
+print ' export $PATH=/path/to/installing/dir/:$PATH'."\n";
