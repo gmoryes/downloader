@@ -3,6 +3,7 @@
 # Install
 ```sh
 git clone https://github.com/gmoryes/downloader.git
+cd downloader
 ./install
 ```
 
