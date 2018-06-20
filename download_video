@@ -18,14 +18,14 @@ GetOptions($CONFIG, qw/
 if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "Execute: download_video\n";
     print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
-    print "\t--max-active-downloads - Maximum active segments downloads, default: 20\n";
+    print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
     print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
     print "\t--help                 - Show this message\n";
     exit;
 }
 
 $CONFIG->{'tmp-dir'} ||= "/tmp";
-$CONFIG->{'max-active-downloads'} ||= 20;
+$CONFIG->{'max-active-downloads'} ||= 5;
 
 my $url = $CONFIG->{url};
 my $stop = 0;
