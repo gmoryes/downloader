@@ -1,0 +1,167 @@
+#!/opt/local/bin/perl5.24
+
+use strict;
+use warnings;
+
+use AnyEvent::HTTP;
+use Getopt::Long;
+use Term::ANSIColor;
+
+my $CONFIG = {}; 
+GetOptions($CONFIG, qw/ 
+    url=s
+    max-active-downloads=i
+    tmp-dir=s
+    help
+/);
+
+if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
+    print "Execute: download_video\n";
+    print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
+    print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
+    print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
+    print "\t--help                 - Show this message\n";
+    exit;
+}
+
+$CONFIG->{'tmp-dir'} ||= "/tmp";
+$CONFIG->{'max-active-downloads'} ||= 5;
+
+my $url = $CONFIG->{url};
+my $stop = 0;
+my $dir = $CONFIG->{'tmp-dir'}."/ts";
+my $max_active_downloads = $CONFIG->{'max-active-downloads'};
+my $current_part = 1;
+my $last_part = 0;
+
+system("rm -rf $dir");
+system("mkdir $dir");
+
+$| = 1;
+
+my $cv = AnyEvent->condvar;
+
+sub download {
+    my $number = shift;
+    
+    $cv->begin;
+    http_get(
+        "$url/segment$number.ts",
+        sub {
+            my ($data, $headers) = @_;
+            my $response_code = $headers->{Status};
+            print "Process: $current_part / $last_part\r"; 
+            if ($response_code =~ /^2/) { 
+                open (my $fh, ">", "$dir/$number.ts") or die $!;
+                syswrite($fh, $data);
+                close($fh);
+                if ($current_part + 1 <= $last_part) {
+                    $current_part++;
+                    download($current_part);
+                }
+            }
+
+            $cv->end;
+        }
+    );
+}
+
+sub is_zero_size {
+    my $number = shift;
+
+    my $result = 0;
+    my $condvar = AnyEvent->condvar;
+    $condvar->begin;
+
+    http_head(
+        "$url/segment$number.ts",
+        sub {
+            my ($data, $headers) = @_;
+            
+            if ($headers->{'content-length'} == 0 || $headers->{Status} == 404) {
+                $result = 1;
+            }
+
+            $condvar->end;
+        }
+    );
+
+    $condvar->recv;
+
+    return $result
+}
+
+sub get_last_segment_number {
+    my $current_segment = 1;
+
+    while (not is_zero_size($current_segment)) {
+        print "Try get: $current_segment segment\r";
+        $current_segment += 100;
+    }
+
+    $current_segment -= 100;
+
+    while (not is_zero_size($current_segment)) {
+        print "Try get: $current_segment segment\r";
+        $current_segment += 10;
+    }
+
+    $current_segment -= 10;
+
+    while (not is_zero_size($current_segment)) {
+        print "Try get: $current_segment segment\r";
+        $current_segment++;
+    }
+
+    return $current_segment - 1;
+}
+
+print color("bold blue");
+print "Try to find last segment...\n";
+print color('reset');
+
+$last_part = get_last_segment_number();
+
+print color("red");
+print "\nLast segment: $last_part\n";
+
+print color("bold blue");
+print "Start download\n";
+print color('reset');
+
+$cv->begin;
+
+for my $i (1 .. $max_active_downloads) {
+    download($i);    
+}
+
+$cv->end;
+$cv->recv;
+
+print color("bold green");
+print "\nEnd download\n";
+print color('reset');
+
+print color("bold blue");
+print "Start concatinate\n";
+print color('reset');
+
+my $tmp = $CONFIG->{'tmp-dir'};
+my $list_path = "/tmp/list_download_video";
+
+system("rm -rf $list_path");
+open(my $fh, ">", $list_path) or die $!;
+
+for my $i (1 .. $last_part) {
+    print $fh "file '"."$dir/$i.ts"."'\n";
+}
+close($fh);
+
+system("rm -rf $tmp/video.ts");
+system("ffmpeg -f concat -safe 0 -i $list_path -c copy $tmp/video.ts");
+system("rm -rf $tmp/video.mp4");
+system("ffmpeg -i $tmp/video.ts -bsf:a aac_adtstoasc -c copy $tmp/video.mp4");
+
+print color("bold green");
+print "Success, result placed to: $tmp/video.mp4\n";
+print color('reset');
