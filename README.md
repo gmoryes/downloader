@@ -1,6 +1,24 @@
 # Console application, provides download online video to your computor
 
 # Install
+
+## Dependencies
+1. perl AnyEvent::HTTP, for install type in terminal
+```sh
+perl -MCPAN -e 'install(AnyEvent::HTTP)'
+```
+2. ffmpeg
+MacOS, with [brew](https://brew.sh/index_ru)
+```sh
+brew install ffmpeg
+```
+Ubuntu
+```sh
+sudo apt-get install ffmpeg
+```
+
+## Installer
+
 ```sh
 git clone https://github.com/gmoryes/downloader.git
 cd downloader
