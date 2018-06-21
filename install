@@ -7,7 +7,8 @@ system("perl Makefile.PL");
 system("make");
 system("sudo make install");
 
-print color("bold red");
+print "\n\n";
+print color("bold yellow");
 print "Add installing path to your .bashrc/.bash_profile\n";
 print color("bold green");
 print "Hint:";
