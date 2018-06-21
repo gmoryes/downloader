@@ -8,14 +8,14 @@
 sudo perl -MCPAN -e 'install(AnyEvent::HTTP)'
 ```
 2. ffmpeg
-MacOS, with [brew](https://brew.sh/index_ru)
-```sh
-brew install ffmpeg
-```
-Ubuntu
-```sh
-sudo apt-get install ffmpeg
-```
+    MacOS, with [brew](https://brew.sh/index_ru)
+    ```sh
+    brew install ffmpeg
+    ```
+    Ubuntu
+    ```sh
+    sudo apt-get install ffmpeg
+    ```
 
 ## Installer
 
