@@ -5,7 +5,7 @@
 ## Dependencies
 1. perl AnyEvent::HTTP, for install type in terminal
 ```sh
-perl -MCPAN -e 'install(AnyEvent::HTTP)'
+sudo perl -MCPAN -e 'install(AnyEvent::HTTP)'
 ```
 2. ffmpeg
 MacOS, with [brew](https://brew.sh/index_ru)
