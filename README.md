@@ -26,7 +26,7 @@ cd downloader
 ./install
 ```
 
-**Note:** Look at red text after install and don't forget add installing path to your .bashrc or .bash_profile
+**Note:** Look at hint text after install and don't forget add installing path to your .bashrc or .bash_profile
 
 # Usage
 ```sh
