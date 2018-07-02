@@ -9,7 +9,7 @@ system("sudo make install");
 
 print "\n\n";
 print color("bold yellow");
-print "Add installing path to your .bashrc/.bash_profile\n";
+print "Add installing path to your .bashrc or .bash_profile\n";
 print color("bold green");
 print "Hint:";
 print color("reset");
