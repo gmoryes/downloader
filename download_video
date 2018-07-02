@@ -12,6 +12,7 @@ GetOptions($CONFIG, qw/
     url=s
     max-active-downloads=i
     tmp-dir=s
+    retries-count=i
     help
 /);
 
@@ -20,12 +21,14 @@ if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
     print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
     print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
+    print "\t--retries-count        - Number of attempts to download one segment, default: 5\n";
     print "\t--help                 - Show this message\n";
     exit;
 }
 
 $CONFIG->{'tmp-dir'} ||= "/tmp";
 $CONFIG->{'max-active-downloads'} ||= 5;
+$CONFIG->{'retries-count'} ||= 5;
 
 my $url = $CONFIG->{url};
 my $stop = 0;
@@ -43,10 +46,24 @@ my $cv = AnyEvent->condvar;
 
 sub download {
     my $number = shift;
+    my $attempt = shift;
+
+    if (!$attempt) {
+        print color("bold red");
+        print "Error: segment$number.ts, can not download this segment :(\n";
+        print color('reset');
+
+        if ($current_part + 1 <= $last_part) {
+            $current_part++;
+            download($current_part, $CONFIG->{'retries-count'});
+        }
+        return;
+    }
     
     $cv->begin;
     http_get(
         "$url/segment$number.ts",
+        timeout => 5,
         sub {
             my ($data, $headers) = @_;
             my $response_code = $headers->{Status};
@@ -57,8 +74,13 @@ sub download {
                 close($fh);
                 if ($current_part + 1 <= $last_part) {
                     $current_part++;
-                    download($current_part);
+                    download($current_part, $CONFIG->{'retries-count'});
                 }
+            } else {
+                print color("bold yellow");
+                print "Bad attempt: segment$number.ts, try again ($attempt / ".$CONFIG->{'retries-count'}.")\n";
+                print color('reset');
+                download($number, $attempt - 1);
             }
 
             $cv->end;
@@ -132,7 +154,7 @@ print color('reset');
 $cv->begin;
 
 for my $i (1 .. $max_active_downloads) {
-    download($i);    
+    download($i, $CONFIG->{'retries-count'});
 }
 
 $cv->end;
@@ -153,7 +175,9 @@ system("rm -rf $list_path");
 open(my $fh, ">", $list_path) or die $!;
 
 for my $i (1 .. $last_part) {
-    print $fh "file '"."$dir/$i.ts"."'\n";
+    if (-e "$dir/$i.ts") {
+        print $fh "file '"."$dir/$i.ts"."'\n";
+    }
 }
 close($fh);
 
