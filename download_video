@@ -21,7 +21,7 @@ if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
     print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
     print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
-    print "\t--retries-count        - Number of attempts to download one segment, default: 5\n";
+    print "\t--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5\n";
     print "\t--help                 - Show this message\n";
     exit;
 }
@@ -43,6 +43,7 @@ system("mkdir $dir");
 $| = 1;
 
 my $cv = AnyEvent->condvar;
+my $time_start = 0;
 
 sub download {
     my $number = shift;
@@ -67,7 +68,10 @@ sub download {
         sub {
             my ($data, $headers) = @_;
             my $response_code = $headers->{Status};
-            print "Process: $current_part / $last_part\r"; 
+            my $speed = $current_part / (time - $time_start + 1);
+            my $await_time = ($last_part - $current_part) / $speed; # in seconds
+            $await_time = sprintf("%.1f", $await_time / 60); # in minutes
+            print "Process: $current_part / $last_part, await time ~ $await_time minutes            \r"; 
             if ($response_code =~ /^2/) { 
                 open (my $fh, ">", "$dir/$number.ts") or die $!;
                 syswrite($fh, $data);
@@ -78,9 +82,11 @@ sub download {
                 }
             } else {
                 print color("bold yellow");
-                print "Bad attempt: segment$number.ts, try again ($attempt / ".$CONFIG->{'retries-count'}.")\n";
+                print "Bad attempt: segment$number.ts, try again";
+                print "($attempt / ".$CONFIG->{'retries-count'}.")\n" if ($attempt != -1);
+
                 print color('reset');
-                download($number, $attempt - 1);
+                download($number, ($attempt == -1) ? -1 : $attempt - 1);
             }
 
             $cv->end;
@@ -117,21 +123,21 @@ sub get_last_segment_number {
     my $current_segment = 1;
 
     while (not is_zero_size($current_segment)) {
-        print "Try get: $current_segment segment\r";
+        print "Try get: $current_segment segments\r";
         $current_segment += 100;
     }
 
     $current_segment -= 100;
 
     while (not is_zero_size($current_segment)) {
-        print "Try get: $current_segment segment\r";
+        print "Try get: $current_segment segments\r";
         $current_segment += 10;
     }
 
     $current_segment -= 10;
 
     while (not is_zero_size($current_segment)) {
-        print "Try get: $current_segment segment\r";
+        print "Try get: $current_segment segments\r";
         $current_segment++;
     }
 
@@ -143,9 +149,7 @@ print "Try to find last segment...\n";
 print color('reset');
 
 $last_part = get_last_segment_number();
-
-print color("red");
-print "\nLast segment: $last_part\n";
+print "\n";
 
 print color("bold blue");
 print "Start download\n";
@@ -153,6 +157,7 @@ print color('reset');
 
 $cv->begin;
 
+$time_start = time;
 for my $i (1 .. $max_active_downloads) {
     download($i, $CONFIG->{'retries-count'});
 }
@@ -189,3 +194,5 @@ system("ffmpeg -i $tmp/video.ts -bsf:a aac_adtstoasc -c copy $tmp/video.mp4");
 print color("bold green");
 print "Success, result placed to: $tmp/video.mp4\n";
 print color('reset');
+
+system("open ".$CONFIG->{'tmp-dir'});
