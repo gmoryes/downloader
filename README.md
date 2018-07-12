@@ -34,7 +34,7 @@ download_video --help
 	--url                  - URL for concat 'segment[n].ts' and get full video
 	--max-active-downloads - Maximum active segments downloads, default: 5
 	--tmp-dir              - Temporary directory for save files, default: /tmp
-	--retries-count        - Number of attempts to download one segment, default: 5
+	--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5
 	--help                 - Show this message
 ```
 
