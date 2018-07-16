@@ -1,4 +1,4 @@
-# Console application, provides download online video to your computor
+# Console application, provides download online video to your computer
 
 # Install
 
