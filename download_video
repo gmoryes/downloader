@@ -83,7 +83,7 @@ sub download {
             } else {
                 print color("bold yellow");
                 print "Bad attempt: segment$number.ts, try again";
-                print "($attempt / ".$CONFIG->{'retries-count'}.")\n" if ($attempt != -1);
+                print "($attempt / ".$CONFIG->{'retries-count'}.")                \n" if ($attempt != -1);
 
                 print color('reset');
                 download($number, ($attempt == -1) ? -1 : $attempt - 1);
