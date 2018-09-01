@@ -7,6 +7,18 @@ use AnyEvent::HTTP;
 use Getopt::Long;
 use Term::ANSIColor;
 
+sub create_dir_if_exists {
+    my $dir = shift;
+    my $i = 1;
+    while (1) {
+        if (!(-e $dir.$i)) {
+            system("mkdir ".$dir.$i);
+            return $dir.$i;
+        }
+        $i++;
+    }
+}
+
 my $CONFIG = {}; 
 GetOptions($CONFIG, qw/ 
     url=s
@@ -27,18 +39,16 @@ if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
 }
 
 $CONFIG->{'tmp-dir'} ||= "/tmp";
+$CONFIG->{'tmp-dir'} = create_dir_if_exists($CONFIG->{'tmp-dir'}.'/tmp');
 $CONFIG->{'max-active-downloads'} ||= 5;
 $CONFIG->{'retries-count'} ||= 5;
 
 my $url = $CONFIG->{url};
 my $stop = 0;
-my $dir = $CONFIG->{'tmp-dir'}."/ts";
+my $dir = create_dir_if_exists($CONFIG->{'tmp-dir'}."/ts");
 my $max_active_downloads = $CONFIG->{'max-active-downloads'};
 my $current_part = 1;
 my $last_part = 0;
-
-system("rm -rf $dir");
-system("mkdir $dir");
 
 $| = 1;
 
@@ -105,7 +115,7 @@ sub is_zero_size {
         "$url/segment$number.ts",
         sub {
             my ($data, $headers) = @_;
-            
+
             if ($headers->{'content-length'} == 0 || $headers->{Status} == 404) {
                 $result = 1;
             }
@@ -174,7 +184,7 @@ print "Start concatinate\n";
 print color('reset');
 
 my $tmp = $CONFIG->{'tmp-dir'};
-my $list_path = "/tmp/list_download_video";
+my $list_path = "$tmp/list_download_video";
 
 system("rm -rf $list_path");
 open(my $fh, ">", $list_path) or die $!;
