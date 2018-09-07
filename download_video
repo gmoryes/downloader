@@ -25,6 +25,7 @@ GetOptions($CONFIG, qw/
     max-active-downloads=i
     tmp-dir=s
     retries-count=i
+    url-format=i
     help
 /);
 
@@ -34,6 +35,9 @@ if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
     print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
     print "\t--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5\n";
+    print "\t--url-format <N>       - Format of url (default: 1)\n";
+    print "\t  --url-format 1   - for \"segment<n>.ts\"\n";
+    print "\t  --url-format 2   - for \"Frag<n>Num<n>.ts\"\n";
     print "\t--help                 - Show this message\n";
     exit;
 }
@@ -42,6 +46,7 @@ $CONFIG->{'tmp-dir'} ||= "/tmp";
 $CONFIG->{'tmp-dir'} = create_dir_if_exists($CONFIG->{'tmp-dir'}.'/tmp');
 $CONFIG->{'max-active-downloads'} ||= 5;
 $CONFIG->{'retries-count'} ||= 5;
+$CONFIG->{'url-format'} ||= 1;
 
 my $url = $CONFIG->{url};
 my $stop = 0;
@@ -54,6 +59,20 @@ $| = 1;
 
 my $cv = AnyEvent->condvar;
 my $time_start = 0;
+
+sub get_url_request {
+    my $number = shift;
+
+    my $url_format = $CONFIG->{'url-format'};
+    if ($url_format eq "1") {
+        return "$url/segment$number.ts";
+    } elsif ($url_format eq "2") {
+        return "$url"."Frag$number"."Num$number.ts";
+    } else {
+        print "Bad url-format: $url_format\n";
+        exit;
+    }
+}
 
 sub download {
     my $number = shift;
@@ -71,9 +90,10 @@ sub download {
         return;
     }
     
+    my $url_request = get_url_request($number);
     $cv->begin;
     http_get(
-        "$url/segment$number.ts",
+        $url_request,
         timeout => 5,
         sub {
             my ($data, $headers) = @_;
@@ -111,8 +131,9 @@ sub is_zero_size {
     my $condvar = AnyEvent->condvar;
     $condvar->begin;
 
+    my $url_request = get_url_request($number);
     http_head(
-        "$url/segment$number.ts",
+        $url_request,
         sub {
             my ($data, $headers) = @_;
 
