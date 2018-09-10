@@ -26,18 +26,22 @@ GetOptions($CONFIG, qw/
     tmp-dir=s
     retries-count=i
     url-format=i
+    start-from=i
+    name=s
     help
 /);
 
 if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "Execute: download_video\n";
     print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
+    print "\t--name                 - Name of output file (default: \"video\")\n";
     print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
     print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
     print "\t--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5\n";
     print "\t--url-format <N>       - Format of url (default: 1)\n";
     print "\t  --url-format 1   - for \"segment<n>.ts\"\n";
     print "\t  --url-format 2   - for \"Frag<n>Num<n>.ts\"\n";
+    print "\t--start-from           - Number of segment, from which download should continue (default: 1)\n";
     print "\t--help                 - Show this message\n";
     exit;
 }
@@ -47,12 +51,16 @@ $CONFIG->{'tmp-dir'} = create_dir_if_exists($CONFIG->{'tmp-dir'}.'/tmp');
 $CONFIG->{'max-active-downloads'} ||= 5;
 $CONFIG->{'retries-count'} ||= 5;
 $CONFIG->{'url-format'} ||= 1;
+$CONFIG->{'name'} ||= "video";
+$CONFIG->{'start-from'} ||= 1;
 
 my $url = $CONFIG->{url};
 my $stop = 0;
 my $dir = create_dir_if_exists($CONFIG->{'tmp-dir'}."/ts");
 my $max_active_downloads = $CONFIG->{'max-active-downloads'};
-my $current_part = 1;
+
+my $proccessed_parts = 1;
+my $current_part = $CONFIG->{'start-from'};
 my $last_part = 0;
 
 $| = 1;
@@ -98,11 +106,12 @@ sub download {
         sub {
             my ($data, $headers) = @_;
             my $response_code = $headers->{Status};
-            my $speed = $current_part / (time - $time_start + 1);
+            my $speed = $proccessed_parts / (time - $time_start + 1);
             my $await_time = ($last_part - $current_part) / $speed; # in seconds
             $await_time = sprintf("%.1f", $await_time / 60); # in minutes
             print "Process: $current_part / $last_part, await time ~ $await_time minutes            \r"; 
             if ($response_code =~ /^2/) { 
+                $proccessed_parts++;
                 open (my $fh, ">", "$dir/$number.ts") or die $!;
                 syswrite($fh, $data);
                 close($fh);
@@ -220,10 +229,12 @@ close($fh);
 system("rm -rf $tmp/video.ts");
 system("ffmpeg -f concat -safe 0 -i $list_path -c copy $tmp/video.ts");
 system("rm -rf $tmp/video.mp4");
-system("ffmpeg -i $tmp/video.ts -bsf:a aac_adtstoasc -c copy $tmp/video.mp4");
+
+my $output_name = $CONFIG->{'name'};
+system("ffmpeg -i $tmp/video.ts -bsf:a aac_adtstoasc -c copy $tmp/$output_name.mp4");
 
 print color("bold green");
-print "Success, result placed to: $tmp/video.mp4\n";
+print "Success, result placed to: $tmp/$output_name.mp4\n";
 print color('reset');
 
 system("open ".$CONFIG->{'tmp-dir'});
