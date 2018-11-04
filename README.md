@@ -31,11 +31,18 @@ cd downloader
 # Usage
 ```sh
 download_video --help
-	--url                  - URL for concat 'segment[n].ts' and get full video
-	--max-active-downloads - Maximum active segments downloads, default: 5
-	--tmp-dir              - Temporary directory for save files, default: /tmp
-	--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5
-	--help                 - Show this message
+	--url                   - URL for concat 'segment[n].ts' and get full video
+	--name                  - Name of output file (default: "video")
+	--max-active-downloads  - Maximum active segments downloads, default: 5
+	--tmp-dir               - Temporary directory for save files, default: /tmp
+	--retries-count         - Number of attempts to download one segment (-1 means infinitive), default: 5
+	--url-format <N>        - Format of url (default: 1)
+	  --url-format 1   - for "segment<n>.ts"
+	  --url-format 2   - for "Frag<n>Num<n>.ts"
+	--push-android-path <s> - Set path for files in android device (default: /sdcard/Movies).
+	--push-android          - Make `adb push` to connected android devices (debug mode on is needed).
+	--start-from            - Number of segment, from which download should continue (default: 1)
+	--help                  - Show this message
 ```
 
 # Example

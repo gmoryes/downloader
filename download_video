@@ -28,22 +28,30 @@ GetOptions($CONFIG, qw/
     url-format=i
     start-from=i
     name=s
+    push-android
+    push-android-path=s
     help
 /);
 
 if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "Execute: download_video\n";
-    print "\t--url                  - URL for concat 'segment[n].ts' and get full video\n";
-    print "\t--name                 - Name of output file (default: \"video\")\n";
-    print "\t--max-active-downloads - Maximum active segments downloads, default: 5\n";
-    print "\t--tmp-dir              - Temporary directory for save files, default: /tmp\n";
-    print "\t--retries-count        - Number of attempts to download one segment (-1 means infinitive), default: 5\n";
-    print "\t--url-format <N>       - Format of url (default: 1)\n";
+    print "\t--url                   - URL for concat 'segment[n].ts' and get full video\n";
+    print "\t--name                  - Name of output file (default: \"video\")\n";
+    print "\t--max-active-downloads  - Maximum active segments downloads, default: 5\n";
+    print "\t--tmp-dir               - Temporary directory for save files, default: /tmp\n";
+    print "\t--retries-count         - Number of attempts to download one segment (-1 means infinitive), default: 5\n";
+    print "\t--url-format <N>        - Format of url (default: 1)\n";
     print "\t  --url-format 1   - for \"segment<n>.ts\"\n";
     print "\t  --url-format 2   - for \"Frag<n>Num<n>.ts\"\n";
-    print "\t--start-from           - Number of segment, from which download should continue (default: 1)\n";
-    print "\t--help                 - Show this message\n";
+    print "\t--push-android-path <s> - Set path for files in android device (default: /sdcard/Movies).\n";
+    print "\t--push-android          - Make `adb push` to connected android devices (debug mode on is needed).\n";
+    print "\t--start-from            - Number of segment, from which download should continue (default: 1)\n";
+    print "\t--help                  - Show this message\n";
     exit;
+}
+
+if (not exists $CONFIG->{'push-android-path'} and exists $CONFIG->{'push-android'}) {
+  $CONFIG->{'push-android-path'} = '/sdcard/Movies';
 }
 
 $CONFIG->{'tmp-dir'} ||= "/tmp";
@@ -109,7 +117,7 @@ sub download {
             my $speed = $proccessed_parts / (time - $time_start + 1);
             my $await_time = ($last_part - $current_part) / $speed; # in seconds
             $await_time = sprintf("%.1f", $await_time / 60); # in minutes
-            print "Process: $current_part / $last_part, await time ~ $await_time minutes            \r"; 
+            print "Process: $current_part / $last_part, await time ~ $await_time minutes                                                \r"; 
             if ($response_code =~ /^2/) { 
                 $proccessed_parts++;
                 open (my $fh, ">", "$dir/$number.ts") or die $!;
@@ -122,8 +130,8 @@ sub download {
             } else {
                 print color("bold yellow");
                 print "Bad attempt: segment$number.ts, try again";
-                print "($attempt / ".$CONFIG->{'retries-count'}.")                \n" if ($attempt != -1);
-
+                print "($attempt / ".$CONFIG->{'retries-count'}.")                                                                     \n" if ($attempt != -1);
+                print "\n" if $attempt == -1;
                 print color('reset');
                 download($number, ($attempt == -1) ? -1 : $attempt - 1);
             }
@@ -219,10 +227,12 @@ my $list_path = "$tmp/list_download_video";
 system("rm -rf $list_path");
 open(my $fh, ">", $list_path) or die $!;
 
-for my $i (1 .. $last_part) {
-    if (-e "$dir/$i.ts") {
-        print $fh "file '"."$dir/$i.ts"."'\n";
-    }
+for my $i (1 .. $last_part)
+{
+  if (-e "$dir/$i.ts")
+  {
+    print $fh "file '"."$dir/$i.ts"."'\n";
+  }
 }
 close($fh);
 
@@ -233,8 +243,25 @@ system("rm -rf $tmp/video.mp4");
 my $output_name = $CONFIG->{'name'};
 system("ffmpeg -i $tmp/video.ts -bsf:a aac_adtstoasc -c copy $tmp/$output_name.mp4");
 
-print color("bold green");
-print "Success, result placed to: $tmp/$output_name.mp4\n";
-print color('reset');
 
-system("open ".$CONFIG->{'tmp-dir'});
+if ($CONFIG->{'push-android'})
+{
+  print color("bold green");
+  print "Start pushing to android device\n";
+  print color('reset');
+
+  my $path = $CONFIG->{'push-android-path'};
+  system("adb push $tmp/$output_name.mp4 $path/$output_name.mp4");
+}
+else
+{
+  system("open ".$CONFIG->{'tmp-dir'});
+}
+
+print color("bold green");
+if ($CONFIG->{'push-android'}) {
+  print "Success, pushed to: ".$CONFIG->{'push-android-path'}."\n";
+} else {
+  print "Success, result placed to: $tmp/$output_name.mp4\n";
+}
+print color('reset');
