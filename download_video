@@ -80,6 +80,18 @@ $| = 1;
 my $cv = AnyEvent->condvar;
 my $time_start = 0;
 
+sub print_color {
+  my ($param, @text) = @_;
+  print color($param);
+  print @text;
+  print color('reset');
+}
+
+$SIG{INT} = sub {
+  print_color("bold red", "\nInterrupt app, stop downloading, start concatinate framents.\n");
+  $cv->send;
+};
+
 sub get_url_by_nsuffix {
   my $number = shift;
   my $suffix_format = $CONFIG->{'nsuffix'};
@@ -100,7 +112,7 @@ sub get_url_request {
     return get_url_by_nsuffix($number);
   } else {
     my $suffix = $CONFIG->{'suffix'};
-    $suffix =~ s/$/$number/g;
+    $suffix =~ s/\$/$number/g;
     return "$url/$suffix";
   }
 }
