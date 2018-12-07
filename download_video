@@ -87,7 +87,13 @@ sub print_color {
   print color('reset');
 }
 
+my $int_counter = 0;
 $SIG{INT} = sub {
+  $int_counter++;
+  if ($int_counter == 4) {
+    print_color("bold green", "Try to interrupt 3 times, do exit.\n");
+    exit;
+  }
   print_color("bold red", "\nInterrupt app, stop downloading, start concatinate framents.\n");
   $cv->send;
 };
