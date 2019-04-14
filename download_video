@@ -44,8 +44,8 @@ if (exists $CONFIG->{help} || not exists $CONFIG->{url}) {
     print "\t--nsuffix <N>        - Format of url (default: 1)\n";
     print "\t  --nsuffix 1   - for \"segment<n>.ts\"\n";
     print "\t  --nsuffix 2   - for \"Frag<n>Num<n>.ts\"\n";
-    print "\t--suffix <string> - For any suffix, for example for url: .../segment1.ts, just say \"--suffix segment$.ts\"\n";
-    print "\t                  - where, $ - place where where programm will put numbers of .ts files.\n";
+    print "\t--suffix <string> - For any suffix, for example for url: .../segment1.ts, just say \"--suffix segment{d}.ts\"\n";
+    print "\t                  - where, {d} - place where where programm will put numbers of .ts files.\n";
     print "\t--push-android-path <s> - Set path for files in android device (default: /sdcard/Movies).\n";
     print "\t--push-android          - Make `adb push` to connected android devices (debug mode on is needed).\n";
     print "\t--start-from            - Number of segment, from which download should continue (default: 1)\n";
@@ -118,7 +118,7 @@ sub get_url_request {
     return get_url_by_nsuffix($number);
   } else {
     my $suffix = $CONFIG->{'suffix'};
-    $suffix =~ s/\$/$number/g;
+    $suffix =~ s/\{d\}/$number/g;
     return "$url/$suffix";
   }
 }
@@ -164,7 +164,7 @@ sub download {
                 print color("bold yellow");
                 print "Bad attempt: segment$number.ts, try again";
                 print "($attempt / ".$CONFIG->{'retries-count'}.")                                                                     \n" if ($attempt != -1);
-                print "\n" if $attempt == -1;
+                print "                                                                                                                \n" if $attempt == -1;
                 print color('reset');
                 download($number, ($attempt == -1) ? -1 : $attempt - 1);
             }
@@ -187,7 +187,7 @@ sub is_zero_size {
         sub {
             my ($data, $headers) = @_;
 
-            if ($headers->{'content-length'} == 0 || $headers->{Status} == 404) {
+            if ($headers->{Status} == 404) {
                 $result = 1;
             }
 
